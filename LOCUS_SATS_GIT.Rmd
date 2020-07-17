@@ -88,7 +88,26 @@ for (i in 1:length(file_names_sats)) { ### Loop the amount of times there are fi
     data_sats <- bind_rows(data_sats, temp_data_sats) ### bind the first data fild with this new one, combining the two
     
     ### Each loop will add an aditional data file to the data frame, eventually adding all the files within the folder.
-}    
+} %>%
+  mutate(A4 = 8 - A4) %>%
+  mutate(C5 = 8 - C5) %>%
+  mutate(V7 = 8 - V7) %>%
+  mutate(D8 = 8 - D8) %>%
+  mutate(C11 = 8 - C11) %>%
+  mutate(V13 = 8 - V13) %>%
+  mutate(A15 = 8 - A15) %>%
+  mutate(V16 = 8 - V16) %>%
+  mutate(A18 = 8 - A18) %>%
+  mutate(V21 = 8 - V21) %>%
+  mutate(D24 = 8 - D24) %>%
+  mutate(V25 = 8 - V25) %>%
+  mutate(C26 = 8 - C26) %>%
+  mutate(A28 = 8 - A28) %>%
+  mutate(D30 = 8 - D30) %>%
+  mutate(V33 = 8 - V33) %>%
+  mutate(D34 = 8 - D34) %>%
+  mutate(C35 = 8 - C35) %>%
+  mutate(D36 = 8 - D36) 
 
 sats_k <- length(file_names_sats) ### Calculating number of files in the folder
 
@@ -187,25 +206,26 @@ sats_scores <- sats %>%
 
 ### Same process for LOCUS
 locus <- data_locus %>%
-  mutate(firstname = sapply(strsplit(data_locus$`Test Taker Identifier`, " "), head, 1)) %>%
-  mutate(lastname = sapply(strsplit(data_locus$`Test Taker Identifier`, " "), tail, 1)) %>%
-  mutate(fullname = paste(firstname, lastname, seq=' ')) %>%
-  select(Score:'Question 23...27', semester, pre_post, class, fullname) %>%
+  mutate(firstname = sapply(strsplit(data_locus$`Test Taker Identifier`, " "), head, 1)) %>% ### Taking first name column
+  mutate(lastname = sapply(strsplit(data_locus$`Test Taker Identifier`, " "), tail, 1)) %>% ### Taking last name column
+  mutate(fullname = paste(firstname, lastname, seq=' ')) %>% ## Putting them together with a single space inbetween
+  select(Score:'Question 23...27', semester, pre_post, class, fullname) %>% ### Selecting columns of interest
   mutate(na = rowSums(is.na(.[2:24]))) %>% ### Determining how many NA values in each row and creating a new column with that value for each row
   filter(na == 0) %>% ### Removing any row with any NA values (potentially change this?)
   select(-na) %>% ### Remove the column with na value 
-  select(Score, pre_post, fullname, semester, class) %>%
+  select(Score, pre_post, fullname, semester, class) %>% ### Select desired columns
+  ### Removing spacing and weird symbols from names to keep format consisent.
   mutate(fullname = str_to_lower(fullname)) %>%
   mutate(fullname = str_replace_all(fullname, fixed(" "), "")) %>%
   mutate(fullname = str_replace_all(fullname, fixed("-"), "")) %>%
   mutate(fullname = str_replace_all(fullname, fixed("'"), "")) 
 
 locus_scores <- locus %>%
-  mutate(locus_pre = ifelse(pre_post %in% "PRE", Score, '')) %>%
-  mutate(locus_post = ifelse(pre_post %in% "POST", Score, '')) %>%
-  select(fullname, semester, locus_pre, locus_post, class) %>%
-  group_by(fullname, semester, class) %>%
-  summarise_all(funs(trimws(paste(., collapse = ''))))
+  mutate(locus_pre = ifelse(pre_post %in% "PRE", Score, '')) %>% ### Creating a column that fills in with the students score if the student took the PRE test and with nothing if they took the POST test
+  mutate(locus_post = ifelse(pre_post %in% "POST", Score, '')) %>% ### Doing the same but for POST
+  select(fullname, semester, locus_pre, locus_post, class) %>% ### Selecting names, class, semester and pre_post status
+  group_by(fullname, semester, class) %>% ### Grouping by name, semester and class
+  summarise_all(funs(trimws(paste(., collapse = '')))) ### Collapsing rows together together if they have the same name, semester and class, which will line up their pre_post scores.
 
 ```
 
@@ -221,10 +241,10 @@ To do tomorrow:
 
 ### This merges our data files together
 
-scores <- merge(sats_scores, locus_scores, on=c("fullname", "semester", "class"))
+final_scores <- merge(sats_scores, locus_scores, on=c("fullname", "semester", "class")) ### Merging the sats and locus data together, combining rows if they have the name full name, semester and class
 
-scores_1 <- scores %>%
-  mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>%
+final_scores_cleaned <- final_scores %>%
+  mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>% ### Removing NA values
   na.omit()
 
 ```
@@ -235,10 +255,14 @@ We can look a specific item responses and group them into constructs previously 
 
 ## SATS Data
 
+We can produce overlapping histograms with a mean line to see differences across a semester via pre/post averages. This will be done for all the SATS constructs, as well as for the LOCUS scores.
+
+### Effort
+
 ```{r SATS items}
 
 sats_effort <- data_sats %>%
-  select(E1, E2, E14, E27, pre_post) %>%
+  select(E1, E2, E14, E27, pre_post) %>% 
   mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>%
   na.omit()
 
@@ -258,6 +282,8 @@ ggplot(sats_effort_mean, aes(x=means)) +
   scale_x_continuous(name="effort", limits = c(0, 8))
   
 ```
+
+### Interest 
 
 ```{r}
 sats_interest <- data_sats %>%
@@ -282,6 +308,8 @@ ggplot(sats_interest_mean, aes(x=means)) +
 
 ```
 
+### Difficulty
+
 ```{r}
 sats_difficulty <- data_sats %>%
   select(D6, D8, D22, D24, D30, D34, D36, pre_post) %>%
@@ -303,6 +331,8 @@ ggplot(sats_difficulty, aes(x=means)) +
   geom_vline(xintercept = mean(sats_difficulty_pre$means), linetype = "dashed") +
   scale_x_continuous(name="difficulty", limits = c(0, 8))
 ```
+
+### Value
 
 ```{r}
 sats_value <- data_sats %>%
@@ -326,6 +356,8 @@ ggplot(sats_value, aes(x=means)) +
   scale_x_continuous(name="value", limits = c(0, 8))
 ```
 
+### Cognitive Competence
+
 ```{r}
 sats_cogcomp <- data_sats %>%
   select(C5, C11, C26, C31, C32, C35, pre_post) %>%
@@ -348,17 +380,21 @@ ggplot(sats_cogcomp, aes(x=means)) +
   scale_x_continuous(name="cogcomp", limits = c(0, 8))
 ```
 
+### Affect
+
 ```{r}
 sats_affect <- data_sats %>%
-  select(A3, A4, A15, A18, A19, A28, pre_post)
+  select(A3, A4, A15, A18, A19, A28, pre_post) %>%
+  mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>%
+  na.omit()
 
 sats_affect_mean <- sats_affect %>%
   select(A3:A28) %>%
   mutate(means = rowMeans(.)) %>% ### Calculating means for each row (or student in this case) so that we can plot a histogram of the averages in the constructs.
   mutate(pre_post = sats_affect$pre_post) 
 
-sats_affect_post <- subset(sats_interest_mean, pre_post == "POST")
-sats_affect_pre <- subset(sats_interest_mean, pre_post == "PRE")
+sats_affect_post <- subset(sats_affect_mean, pre_post == "POST")
+sats_affect_pre <- subset(sats_affect_mean, pre_post == "PRE")
 
 ggplot(sats_affect_mean, aes(x=means)) +
   geom_histogram(data=subset(sats_affect_mean, pre_post == "POST"), fill = "red", alpha = 0.2) +
@@ -366,14 +402,31 @@ ggplot(sats_affect_mean, aes(x=means)) +
   geom_histogram(data=subset(sats_affect_mean, pre_post == "PRE"), fill = "green", alpha = 0.2) +
   geom_vline(xintercept = mean(sats_affect_pre$means), linetype = "dashed") +
   scale_x_continuous(name="affect", limits = c(0, 8))
-
 ```
+### Scores
+
+```{r}
+sats_responses <- sats %>%
+  select(SC0, pre_post)
+
+sats_responses_post <- subset(sats_responses, pre_post == "POST")
+sats_responses_pre <- subset(sats_responses, pre_post == "PRE")
+
+ggplot(sats_responses, aes(x=SC0)) +
+  geom_histogram(data=subset(sats_responses, pre_post == "POST"), fill = "red", alpha = 0.2) +
+  geom_vline(xintercept = mean(sats_responses_post$SC0)) +
+  geom_histogram(data=subset(sats_responses, pre_post == "PRE"), fill = "green", alpha = 0.2) +
+  geom_vline(xintercept = mean(sats_responses_pre$SC0), linetype = "dashed") +
+  scale_x_continuous(name="scores")
+```
+
+## LOCUS Data
+
+### Scores
 
 ```{r}
 locus_responses <- data_locus %>%
-  select(Score, pre_post) %>%
-  mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>%
-  na.omit()
+  select(Score, pre_post)
 
 locus_responses_post <- subset(locus_responses, pre_post == "POST")
 locus_responses_pre <- subset(locus_responses, pre_post == "PRE")
