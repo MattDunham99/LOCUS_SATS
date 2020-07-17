@@ -103,7 +103,7 @@ We have a total of **`r sats_k`** files and **`r sats_n`** observations.
 
 LOCUS data was downloaded from the LOCUS website. The data downloaded was "Test Taker Raw" which contains students responses (we can calculate scores from this). Every file was converted to an excel file as I was having trouble reading it as a csv (this may be due to the comma seperated values). I did this manually, but I will attempt to find a way to have this done more efficiently.
 
-```{r Reading in LOCUS Data}
+```{r Reading in LOCUS Data, message=FALSE, warning=FALSE}
 
 file_names_locus <- dir(path="C:/Users/Matth/OneDrive/Desktop/LOCUS_SOMAS/LOCUS Data") ### Reading in the names of all the files from a seperate folder
 
@@ -352,26 +352,29 @@ ggplot(sats_cogcomp, aes(x=means)) +
 sats_affect <- data_sats %>%
   select(A3, A4, A15, A18, A19, A28, pre_post)
 
-sats_interest_mean <- sats_interest %>%
-  select(I12:I29) %>%
+sats_affect_mean <- sats_affect %>%
+  select(A3:A28) %>%
   mutate(means = rowMeans(.)) %>% ### Calculating means for each row (or student in this case) so that we can plot a histogram of the averages in the constructs.
-  mutate(pre_post = sats_interest$pre_post) 
+  mutate(pre_post = sats_affect$pre_post) 
 
-sats_interest_post <- subset(sats_interest_mean, pre_post == "POST")
-sats_interest_pre <- subset(sats_interest_mean, pre_post == "PRE")
+sats_affect_post <- subset(sats_interest_mean, pre_post == "POST")
+sats_affect_pre <- subset(sats_interest_mean, pre_post == "PRE")
 
-ggplot(x, aes(x=means)) +
-  geom_histogram(data=subset(sats_interest_mean, pre_post == "POST"), fill = "red", alpha = 0.2) +
-  geom_vline(xintercept = mean(sats_interest_post$means)) +
-  geom_histogram(data=subset(sats_interest_mean, pre_post == "PRE"), fill = "green", alpha = 0.2) +
-  geom_vline(xintercept = mean(sats_interest_pre$means), linetype = "dashed") +
-  scale_x_continuous(name="interest", limits = c(0, 8))
+ggplot(sats_affect_mean, aes(x=means)) +
+  geom_histogram(data=subset(sats_affect_mean, pre_post == "POST"), fill = "red", alpha = 0.2) +
+  geom_vline(xintercept = mean(sats_affect_post$means)) +
+  geom_histogram(data=subset(sats_affect_mean, pre_post == "PRE"), fill = "green", alpha = 0.2) +
+  geom_vline(xintercept = mean(sats_affect_pre$means), linetype = "dashed") +
+  scale_x_continuous(name="affect", limits = c(0, 8))
+
 ```
 
 ```{r}
 locus_responses <- data_locus %>%
-  select(Score, pre_post)
-mean(locus_responses_pre$Score)
+  select(Score, pre_post) %>%
+  mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>%
+  na.omit()
+
 locus_responses_post <- subset(locus_responses, pre_post == "POST")
 locus_responses_pre <- subset(locus_responses, pre_post == "PRE")
 
